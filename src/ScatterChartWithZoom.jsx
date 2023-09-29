@@ -1,6 +1,7 @@
 import React, { useRef, useEffect } from "react";
 import Chart from "chart.js/auto";
 import "chartjs-plugin-zoom";
+import "chartjs-plugin-annotation";
 
 function ScatterChartWithZoom() {
   const chartRef = useRef(null);
@@ -176,17 +177,17 @@ function ScatterChartWithZoom() {
                   return `$${(value / 1000000).toFixed(2)}M`;
                 },
               },
-              grid: {
-                drawBorder: false,
-                drawOnChartArea: true,
-                color: function (context) {
-                  if (context.tick.value === 7000000) {
-                    return "black";
-                  }
-                  return "rgba(0, 0, 0, 0)";
-                },
-                tickLength: 0,
-              },
+              //   grid: {
+              //     drawBorder: false,
+              //     drawOnChartArea: true,
+              //     color: function (context) {
+              //       if (context.tick.value === 7000000) {
+              //         return "black";
+              //       }
+              //       return "rgba(0, 0, 0, 0)";
+              //     },
+              //     tickLength: 0,
+              //   },
             },
             y: {
               min: 0,
@@ -200,18 +201,29 @@ function ScatterChartWithZoom() {
                   return `$${value}`;
                 },
               },
-              grid: {
-                drawBorder: false,
-                color: function (context) {
-                  return context.tick.value === 60
-                    ? "black"
-                    : "rgba(0, 0, 0, 0)";
-                },
-              },
+              //   grid: {
+              //     drawBorder: false,
+              //     color: function (context) {
+              //       return context.tick.value === 60
+              //         ? "black"
+              //         : "rgba(0, 0, 0, 0)";
+              //     },
+              //   },
             },
           },
 
           plugins: {
+            annotation: {
+              annotations: {
+                line1: {
+                  type: "line",
+                  yMin: 60,
+                  yMax: 60,
+                  borderColor: "rgb(255, 99, 132)",
+                  borderWidth: 2,
+                },
+              },
+            },
             zoom: {
               pan: {
                 enabled: true,
