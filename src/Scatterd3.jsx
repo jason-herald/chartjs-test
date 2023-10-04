@@ -54,53 +54,8 @@ const ScatterPlotd3 = () => {
   useEffect(() => {
     const svg = d3.select("#scatter-plot");
 
-    svg
-      .append("rect")
-      .attr("x", xScale(6000000))
-      .attr("y", margin.top)
-      .attr("width", xScale(6000000) - margin.left)
-      .attr("height", yScale(60) - margin.top)
-      .attr("fill", "grey")
-      .attr("opacity", 0.2)
-      .style("pointer-events", "none");
-
-    svg
-      .selectAll("circle")
-      .data(data)
-      .enter()
-      .append("circle")
-      .attr("cx", (d) => xScale(d.x))
-      .attr("cy", (d) => yScale(d.y))
-      .attr("r", 5)
-      .attr("fill", "#ED6E0C");
-
-    svg
-      .append("g")
-      .attr("transform", `translate(0,${height - margin.bottom})`)
-      .call(d3.axisBottom(xScale).tickFormat((d) => `$${d / 1000000}M`));
-
-    svg
-      .append("g")
-      .attr("transform", `translate(${margin.left},0)`)
-      .call(d3.axisLeft(yScale).tickValues([0, 20, 40, 60, 80, 100, 120]));
-
-    svg
-      .append("line")
-      .attr("x1", xScale(6000000))
-      .attr("y1", margin.top)
-      .attr("x2", xScale(6000000))
-      .attr("y2", height - margin.bottom)
-      .attr("stroke", "black")
-      .attr("stroke-dasharray", "5,5");
-
-    svg
-      .append("line")
-      .attr("x1", margin.left)
-      .attr("y1", yScale(60))
-      .attr("x2", width - margin.right)
-      .attr("y2", yScale(60))
-      .attr("stroke", "black")
-      .attr("stroke-dasharray", "5,5");
+    const g = svg.append("g"); // Create a group for zoomable elements
+    const axisGroup = svg.append("g"); // Create a group for static axes
 
     const tooltip = d3
       .select("body")
@@ -112,15 +67,83 @@ const ScatterPlotd3 = () => {
       .style("border", "solid")
       .style("border-width", "1px")
       .style("border-radius", "5px")
-      .style("padding", "10px");
+      .style("padding", "10px")
+      .on("click", function (event, d) {
+        if (d.link) {
+          window.open(d.link, "_blank");
+        }
+      });
 
-    svg
-      .selectAll("circle")
+    const zoomBehavior = d3.zoom().scaleExtent([1, 10]).on("zoom", zoomed);
+
+    g.call(zoomBehavior);
+
+    function zoomed(event) {
+      const transform = event.transform;
+
+      g.attr("transform", transform); // Apply the zoom transform to the group
+
+      tooltip.style("visibility", "hidden"); // Hide the tooltip during zoom
+      updateAxes(transform);
+    }
+
+    function updateAxes(transform) {
+      axisGroup
+        .select(".x-axis")
+        .call(d3.axisBottom(transform.rescaleX(xScale)));
+      axisGroup.select(".y-axis").call(d3.axisLeft(transform.rescaleY(yScale)));
+    }
+
+    axisGroup
+      .append("g")
+      .attr("class", "x-axis")
+      .attr("transform", `translate(0,${height - margin.bottom})`)
+      .call(d3.axisBottom(xScale).tickFormat((d) => `$${d / 1000000}M`));
+
+    axisGroup
+      .append("g")
+      .attr("class", "y-axis")
+      .attr("transform", `translate(${margin.left},0)`)
+      .call(d3.axisLeft(yScale).tickValues([0, 20, 40, 60, 80, 100, 120]));
+
+    g.append("rect")
+      .attr("x", xScale(6000000))
+      .attr("y", margin.top)
+      .attr("width", xScale(6000000) - margin.left)
+      .attr("height", yScale(60) - margin.top)
+      .attr("fill", "grey")
+      .attr("opacity", 0.2)
+      .style("pointer-events", "none");
+
+    g.selectAll("circle")
+      .data(data)
+      .enter()
+      .append("circle")
+      .attr("cx", (d) => xScale(d.x))
+      .attr("cy", (d) => yScale(d.y))
+      .attr("r", 5)
+      .attr("fill", "#ED6E0C");
+
+    g.append("line")
+      .attr("x1", xScale(6000000))
+      .attr("y1", margin.top)
+      .attr("x2", xScale(6000000))
+      .attr("y2", height - margin.bottom)
+      .attr("stroke", "black");
+
+    g.append("line")
+      .attr("x1", margin.left)
+      .attr("y1", yScale(60))
+      .attr("x2", width - margin.right)
+      .attr("y2", yScale(60))
+      .attr("stroke", "black");
+
+    g.selectAll("circle")
       .on("click", (event, d) => {
         tooltip
           .html(
             `Category: ${d.category}<br/>
-             <a href="${d.link}" target="_blank" rel="noopener noreferrer">View</a>`
+           <a href="${d.link}" target="_blank" rel="noopener noreferrer">View</a>`
           )
           .style("visibility", "visible");
 
@@ -128,8 +151,14 @@ const ScatterPlotd3 = () => {
         tooltip.style("top", y - 10 + "px").style("left", x + 10 + "px");
       })
       .on("mouseout", () => {
-        tooltip.style("visibility", "visible");
+        tooltip.style("visibility", "hidden");
       });
+
+    return () => {
+      svg.selectAll("*").remove(); // This will remove all elements within the SVG
+      d3.select("#tooltip").remove(); // This removes the tooltip div from the body
+      d3.select(document).on("click", null); // This removes the global click event listener
+    };
   }, []);
 
   return <svg id="scatter-plot" width={width} height={height} />;

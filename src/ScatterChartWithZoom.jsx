@@ -31,17 +31,14 @@ function ScatterChartWithZoom() {
   };
 
   const externalTooltipHandler = (context) => {
-    // Tooltip Element
     const { chart, tooltip } = context;
     const tooltipEl = getOrCreateTooltip(chart);
 
-    // Hide if no tooltip
     if (tooltip.opacity === 0) {
       tooltipEl.style.opacity = 0;
       return;
     }
 
-    // Set Text
     if (tooltip.body) {
       const titleLines = tooltip.title || [];
       const bodyLines = tooltip.body.map((b) => b.lines);
@@ -83,33 +80,51 @@ function ScatterChartWithZoom() {
 
         const text = document.createTextNode(body);
 
+        const link = document.createElement("a");
+        link.href = tooltip.dataPoints[i].parsed.link;
+        link.target = "_blank";
+        link.textContent = "Open Link";
+        link.style.cursor = "pointer";
+
+        link.addEventListener("click", (e) => {
+          e.stopPropagation();
+        });
+
+        link.addEventListener("mouseover", () => {
+          link.style.textDecoration = "underline";
+        });
+
+        link.addEventListener("mouseout", () => {
+          link.style.textDecoration = "none";
+        });
+
         td.appendChild(span);
         td.appendChild(text);
+        td.appendChild(link);
+
         tr.appendChild(td);
         tableBody.appendChild(tr);
       });
 
       const tableRoot = tooltipEl.querySelector("table");
 
-      // Remove old children
       while (tableRoot.firstChild) {
         tableRoot.firstChild.remove();
       }
 
-      // Add new children
       tableRoot.appendChild(tableHead);
       tableRoot.appendChild(tableBody);
     }
 
     const { offsetLeft: positionX, offsetTop: positionY } = chart.canvas;
 
-    // Display, position, and set styles for font
     tooltipEl.style.opacity = 1;
     tooltipEl.style.left = positionX + tooltip.caretX + "px";
     tooltipEl.style.top = positionY + tooltip.caretY + "px";
     tooltipEl.style.font = tooltip.options.bodyFont.string;
     tooltipEl.style.padding =
       tooltip.options.padding + "px " + tooltip.options.padding + "px";
+    tooltipEl.style.pointerEvents = "auto";
   };
 
   useEffect(() => {
@@ -152,7 +167,6 @@ function ScatterChartWithZoom() {
                   link: "http://example5.com",
                 },
               ],
-
               backgroundColor: "orange",
               borderColor: "orange",
               borderWidth: 1,
@@ -177,17 +191,13 @@ function ScatterChartWithZoom() {
                   return `$${(value / 1000000).toFixed(2)}M`;
                 },
               },
-              //   grid: {
-              //     drawBorder: false,
-              //     drawOnChartArea: true,
-              //     color: function (context) {
-              //       if (context.tick.value === 7000000) {
-              //         return "black";
-              //       }
-              //       return "rgba(0, 0, 0, 0)";
-              //     },
-              //     tickLength: 0,
-              //   },
+              grid: {
+                display: true,
+                color: "rgba(0, 0, 0, 0.7)", // Adjust the color as needed
+                lineWidth: 2,
+                drawOnChartArea: false,
+                borderDash: [5, 5], // This sets the dashed line pattern
+              },
             },
             y: {
               min: 0,
@@ -201,28 +211,36 @@ function ScatterChartWithZoom() {
                   return `$${value}`;
                 },
               },
-              //   grid: {
-              //     drawBorder: false,
-              //     color: function (context) {
-              //       return context.tick.value === 60
-              //         ? "black"
-              //         : "rgba(0, 0, 0, 0)";
-              //     },
-              //   },
+              grid: {
+                display: true,
+                color: "rgba(0, 0, 0, 0.7)", // Adjust the color as needed
+                lineWidth: 2,
+                drawOnChartArea: false,
+                borderDash: [5, 5], // This sets the dashed line pattern
+              },
             },
           },
-
           plugins: {
             annotation: {
-              annotations: {
-                line1: {
+              drawTime: "beforeDraw",
+              annotations: [
+                {
                   type: "line",
                   yMin: 60,
                   yMax: 60,
                   borderColor: "rgb(255, 99, 132)",
                   borderWidth: 2,
                 },
-              },
+                {
+                  type: "line",
+                  mode: "vertical",
+                  scaleID: "x",
+                  value: 7000000,
+                  borderColor: "green",
+                  borderWidth: 2,
+                  borderDash: [5, 5],
+                },
+              ],
             },
             zoom: {
               pan: {
@@ -251,6 +269,29 @@ function ScatterChartWithZoom() {
               enabled: false,
               external: externalTooltipHandler,
             },
+          },
+          onBeforeDraw: (chart) => {
+            const ctx = chart.ctx;
+            const xAxis = chart.scales.x;
+            const yAxis = chart.scales.y;
+
+            ctx.clearRect(0, 0, chart.width, chart.height);
+
+            const centerY = yAxis.getPixelForValue((yAxis.max + yAxis.min) / 2);
+            ctx.strokeStyle = "rgba(255, 0, 0, 1)";
+            ctx.lineWidth = 2;
+            ctx.setLineDash([]);
+            ctx.beginPath();
+            ctx.moveTo(xAxis.left, centerY);
+            ctx.lineTo(xAxis.right, centerY);
+            ctx.stroke();
+
+            const centerX = xAxis.getPixelForValue((xAxis.max + xAxis.min) / 2);
+            ctx.strokeStyle = "rgba(255, 0, 0, 1)";
+            ctx.beginPath();
+            ctx.moveTo(centerX, yAxis.top);
+            ctx.lineTo(centerX, yAxis.bottom);
+            ctx.stroke();
           },
         },
       });
